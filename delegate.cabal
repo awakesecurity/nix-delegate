@@ -1,0 +1,28 @@
+Name: nix-delegate
+Version: 1.0.0
+Cabal-Version: >=1.8.0.2
+Build-Type: Simple
+License: Apache-2.0
+License-File: LICENSE
+Copyright: 2017 Awake Networks
+Author: Awake Networks
+Maintainer: opensource@awakenetworks.com
+Synopsis: Convenient utility for distributed Nix builds
+
+Library
+    Hs-Source-Dirs: src
+    Exposed-Modules: Nix.Delegate
+    Build-Depends: base
+                 , neat-interpolation                  < 0.4
+                 , optparse-applicative >= 0.13.2.0 && < 0.15
+                 , foldl                               < 1.4
+                 , managed              >= 1.0.3    && < 1.1
+                 , text                                < 1.3
+                 , turtle               >= 1.3.0    && < 1.5
+    GHC-Options: -Wall -Werror
+
+Executable nix-delegate
+    Main-Is: Main.hs
+    Hs-Source-Dirs: app
+    Build-Depends: base, nix-delegate
+    GHC-Options: -Wall -Werror
