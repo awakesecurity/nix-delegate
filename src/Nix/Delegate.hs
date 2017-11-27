@@ -3,6 +3,9 @@
 {-# LANGUAGE QuasiQuotes        #-}
 {-# LANGUAGE RecordWildCards    #-}
 
+{-| This modules provides a basic library API to @nix-delegate@'s functionality
+-}
+
 module Nix.Delegate
     ( -- * Options
       OptArgs(..)
