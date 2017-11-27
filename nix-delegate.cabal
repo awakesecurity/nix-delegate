@@ -12,7 +12,7 @@ Synopsis: Convenient utility for distributed Nix builds
 Library
     Hs-Source-Dirs: src
     Exposed-Modules: Nix.Delegate
-    Build-Depends: base
+    Build-Depends: base                 >= 4.7.0.0  && < 5
                  , neat-interpolation                  < 0.4
                  , optparse-applicative >= 0.13.2.0 && < 0.15
                  , foldl                               < 1.4
