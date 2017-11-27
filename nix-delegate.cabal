@@ -19,7 +19,7 @@ Library
                  , managed              >= 1.0.3    && < 1.1
                  , text                                < 1.3
                  , turtle               >= 1.3.0    && < 1.5
-    GHC-Options: -Wall -Werror
+    GHC-Options: -Wall
 
 Executable nix-delegate
     Main-Is: Main.hs
