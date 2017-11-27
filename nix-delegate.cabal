@@ -25,4 +25,4 @@ Executable nix-delegate
     Main-Is: Main.hs
     Hs-Source-Dirs: app
     Build-Depends: base, nix-delegate
-    GHC-Options: -Wall -Werror
+    GHC-Options: -Wall
