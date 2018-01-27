@@ -308,7 +308,24 @@ delegateShared OptArgs{..}  = do
     let feature'  = Data.Text.intercalate "," feature
     let cores'    = fromMaybe 1 cores
 
-    liftIO (exchangeKeys host)
+    isDaemon <- maybe False (== "daemon") <$> Turtle.need "NIX_REMOTE"
+
+    let sudo | isDaemon && canSudo cmd = "sudo"
+             | otherwise               = ""
+
+    host' <-
+      if isDaemon && not (Data.Text.any (== '@') host)
+      then do
+        mUser <- Turtle.need "USER"
+        case mUser of
+            Nothing   -> Turtle.die [NeatInterpolation.text|
+[x] You must set the `USER` environment variable in order for `nix-delegate` to
+    work in a multi-user Nix installation
+|]
+            Just user -> return (user <> "@" <> host)
+      else return host
+
+    liftIO (exchangeKeys host')
 
     let debuggingTips = [NeatInterpolation.text|
     Debugging tips:
@@ -326,7 +343,7 @@ delegateShared OptArgs{..}  = do
     let line =
             Turtle.format
                 (s%" "%s%" "%fp%" "%d%" 1 "%s)
-                host
+                host'
                 os''
                 key'
                 cores'
@@ -374,11 +391,6 @@ delegateShared OptArgs{..}  = do
 
     $debuggingTips
 |]
-
-    isDaemon <- maybe False (== "daemon") <$> Turtle.need "NIX_REMOTE"
-
-    let sudo | isDaemon && canSudo cmd = "sudo"
-             | otherwise               = ""
 
     let renderedCmd = renderCmd cmd
     let pfxcmd = Turtle.format
