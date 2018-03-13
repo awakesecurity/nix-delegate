@@ -153,8 +153,10 @@ main = do
             )
     delegate options
 
-exchangeKeys :: Text -> IO ()
-exchangeKeys host = do
+exchangeKeys :: FilePath -> Text -> IO ()
+exchangeKeys key host = do
+  let key' = Turtle.format fp key
+
   -- When performing a distributed build you need to share a key pair
   -- (both the public and private key) with the machine you're
   -- deploying to (or from). Both machines must store the same private
@@ -182,7 +184,7 @@ exchangeKeys host = do
 
     1. Check if you can log into the remote machine by running:
 
-        $ ssh $host
+        $ ssh -i $key' $host
 
     2. If you can log in, then check if you have permission to `sudo` without a
        password by running the following command on the remote machine:
@@ -198,14 +200,14 @@ exchangeKeys host = do
   let openssl :: Turtle.Format a a
       openssl =
           "$(nix-build --no-out-link \"<nixpkgs>\" -A libressl)/bin/openssl"
-  let fmt = "ssh "%s%" '"
+  let fmt = "ssh -i "%fp%" "%s%" '"
               % "test -e "%fp%" || "
               % "sudo sh -c \""
                   % "(umask 277 && "%openssl%" genrsa -out "%fp%" 2048) && "
                   % openssl%" rsa -in "%fp%" -pubout > "%fp
               % "\""
           % "'"
-  let cmd = Turtle.format fmt host privateKey privateKey privateKey publicKey
+  let cmd = Turtle.format fmt key host privateKey privateKey privateKey publicKey
   Control.Exception.handle handler0 (Turtle.shells cmd empty)
 
   let mirror path = Turtle.runManaged $ do
@@ -217,7 +219,7 @@ exchangeKeys host = do
                   Turtle.procs "rsync"
                       [ "--archive"
                       , "--checksum"
-                      , "--rsh", "ssh"
+                      , "--rsh", Turtle.format ("ssh -i "%fp) key
                       , "--rsync-path", "sudo rsync"
                       , Turtle.format (s%":"%fp) host path
                       , Turtle.format fp localPath
@@ -234,7 +236,7 @@ exchangeKeys host = do
 
     1. Check if you can log into the remote machine by running:
 
-        $ ssh $host
+        $ ssh -i $key' $host
 
     2. If you can log in, then check if you have permission to `sudo` without a
        password by running the following command on the remote machine:
@@ -303,6 +305,8 @@ exchangeKeys host = do
 delegateShared
     :: MonadManaged managed => OptArgs -> managed (Text, SomeException -> IO a)
 delegateShared OptArgs{..}  = do
+    home <- Turtle.home
+    let key'      = fromMaybe (home </> ".ssh/id_rsa") key
     let os'       = case os of [] -> [X86_64_Linux]; _ -> os
     let os''      = Data.Text.intercalate "," (Foldable.toList (fmap renderOS os'))
     let feature'  = Data.Text.intercalate "," feature
@@ -325,7 +329,18 @@ delegateShared OptArgs{..}  = do
             Just user -> return (user <> "@" <> host)
       else return host
 
-    liftIO (exchangeKeys host')
+    {-| Do a test @ssh@ command in order to prompt the user to recognize the
+        host if the host is not known
+
+        Use @sudo@ if we are in multi-user mode since the @root@ user will be
+        initiating the build and therefore the @root@ user needs to authorize
+        the known host
+    -}
+    Turtle.err "[+} Testing SSH access"
+    let testSSH = s%" ssh -i "%fp%" "%s%" :"
+    Turtle.shells (Turtle.format testSSH sudo key' host') Turtle.empty
+
+    liftIO (exchangeKeys key' host')
 
     let debuggingTips = [NeatInterpolation.text|
     Debugging tips:
@@ -338,8 +353,6 @@ delegateShared OptArgs{..}  = do
 |]
 
     remoteSystemsFile <- Turtle.mktempfile "/tmp" "remote-systems.conf"
-    home <- Turtle.home
-    let key' = fromMaybe (home </> ".ssh/id_rsa") key
     let line =
             Turtle.format
                 (s%" "%s%" "%fp%" "%d%" 1 "%s)
