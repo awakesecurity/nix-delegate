@@ -137,8 +137,9 @@ renderCmd :: Command -> Text
 renderCmd (Command cmd args) = Turtle.format (s%" "%s) cmd (Data.Text.intercalate " " args)
 
 canSudo :: Command -> Bool
-canSudo (Command "nix-build" _) = True
-canSudo _                       = False
+canSudo (Command command _) = Turtle.filename path == "nix-build"
+  where
+    path = Turtle.fromText command
 
 -- | @main@ used by the @delegate@ executable
 main :: IO ()
