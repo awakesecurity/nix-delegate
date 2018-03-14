@@ -21,6 +21,7 @@ module Nix.Delegate
 import           Control.Applicative       (empty, many, (<**>), (<|>))
 import           Control.Exception         (SomeException)
 import           Control.Monad
+import           Control.Monad.IO.Class    (MonadIO)
 import           Control.Monad.Managed     (MonadManaged)
 import qualified Data.Foldable             as Foldable
 import           Data.Maybe
@@ -258,18 +259,11 @@ exchangeKeys key host = do
 
           liftIO (Control.Exception.handle handler1 download)
 
-          exitCode <- Turtle.shell "sudo -n true 2>/dev/null" empty
-
           -- NB: path shouldn't is a FilePath and won't have any
           -- newlines, so this should be okay
           Turtle.err (Turtle.unsafeTextToLine $ Turtle.format ("[+] Installing: "%fp) path)
 
-          case exitCode of
-              ExitFailure _ -> do
-                  Turtle.err ""
-                  Turtle.err "    This will prompt you for your `sudo` password"
-              _             -> do
-                  return ()
+          warnSudo
 
           let install =
                   Turtle.procs "sudo"
@@ -337,8 +331,9 @@ delegateShared OptArgs{..}  = do
         the known host
     -}
     Turtle.err "[+} Testing SSH access"
+    if sudo == "sudo" then warnSudo else return ()
     let testSSH = s%" ssh -i "%fp%" "%s%" :"
-    Turtle.shells (Turtle.format testSSH sudo key' host') Turtle.empty
+    Turtle.shells (Turtle.format testSSH sudo key' host') Turtle.stdin
 
     liftIO (exchangeKeys key' host')
 
@@ -453,3 +448,14 @@ delegateStream :: OptArgs -> Shell Line
 delegateStream options = do
     (command, _) <- delegateShared options
     Turtle.inshell command empty
+
+warnSudo :: MonadIO io => io ()
+warnSudo = do
+    exitCode <- Turtle.shell "sudo -n true 2>/dev/null" empty
+
+    case exitCode of
+        ExitFailure _ -> do
+            Turtle.err ""
+            Turtle.err "    This will prompt you for your `sudo` password"
+        _             -> do
+            return ()
