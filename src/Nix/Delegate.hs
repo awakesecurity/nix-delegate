@@ -336,7 +336,7 @@ delegateShared OptArgs{..}  = do
         initiating the build and therefore the @root@ user needs to authorize
         the known host
     -}
-    Turtle.err "[+} Testing SSH access"
+    Turtle.err "[+] Testing SSH access"
     let testSSH = s%" ssh -i "%fp%" "%s%" :"
     Turtle.shells (Turtle.format testSSH sudo key' host') Turtle.empty
 
