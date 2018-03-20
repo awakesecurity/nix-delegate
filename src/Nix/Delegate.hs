@@ -324,7 +324,7 @@ delegateShared OptArgs{..}  = do
             Just user -> return (user <> "@" <> host)
       else return host
 
-    {-| Do a test @ssh@ command in order to prompt the user to recognize the
+    {-  Do a test @ssh@ command in order to prompt the user to recognize the
         host if the host is not known
 
         Use @sudo@ if we are in multi-user mode since the @root@ user will be
