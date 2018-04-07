@@ -33,6 +33,7 @@ import           Turtle                    (ExitCode (..), FilePath, Line,
 
 import qualified Control.Exception
 import qualified Control.Foldl             as Foldl
+import qualified Data.ByteString.Lazy
 import qualified Data.Text
 import qualified NeatInterpolation
 import qualified Options.Applicative       as Options
@@ -260,16 +261,17 @@ exchangeKeys key host = do
 
           liftIO (Control.Exception.handle handler1 download)
 
-          ec <- Turtle.proc "cmp"
-              [ "-s"
-              , Turtle.format fp localPath
-              , Turtle.format fp path
-              ] empty
-          case ec of
-              ExitSuccess -> do
+          new <- liftIO . Data.ByteString.Lazy.readFile . Data.Text.unpack $
+            Turtle.format fp localPath
+
+          old <- liftIO . Data.ByteString.Lazy.readFile . Data.Text.unpack $
+            Turtle.format fp path
+
+          if new == old
+              then do
                   let same = Turtle.format ("[+] Unchanged: "%fp) path
                   mapM_ Turtle.err (Turtle.Line.textToLines same)
-              _ -> do
+              else do
                   -- NB: path shouldn't is a FilePath and won't have any
                   -- newlines, so this should be okay
                   Turtle.err (Turtle.unsafeTextToLine $ Turtle.format ("[+] Installing: "%fp) path)
