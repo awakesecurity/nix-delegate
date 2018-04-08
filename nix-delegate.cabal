@@ -13,6 +13,7 @@ Library
     Hs-Source-Dirs: src
     Exposed-Modules: Nix.Delegate
     Build-Depends: base                 >= 4.7.0.0  && < 5
+                 , bytestring           >= 0.10.8.1 && < 1.0
                  , neat-interpolation                  < 0.4
                  , optparse-applicative >= 0.13.2.0 && < 0.15
                  , foldl                               < 1.4

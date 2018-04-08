@@ -33,6 +33,7 @@ import           Turtle                    (ExitCode (..), FilePath, Line,
 
 import qualified Control.Exception
 import qualified Control.Foldl             as Foldl
+import qualified Data.ByteString.Lazy
 import qualified Data.Text
 import qualified NeatInterpolation
 import qualified Options.Applicative       as Options
@@ -260,24 +261,35 @@ exchangeKeys key host = do
 
           liftIO (Control.Exception.handle handler1 download)
 
-          -- NB: path shouldn't is a FilePath and won't have any
-          -- newlines, so this should be okay
-          Turtle.err (Turtle.unsafeTextToLine $ Turtle.format ("[+] Installing: "%fp) path)
+          new <- liftIO . Data.ByteString.Lazy.readFile . Data.Text.unpack $
+            Turtle.format fp localPath
 
-          warnSudo
+          old <- liftIO . Data.ByteString.Lazy.readFile . Data.Text.unpack $
+            Turtle.format fp path
 
-          let install =
-                  Turtle.procs "sudo"
-                      [ "mv"
-                      , Turtle.format fp localPath
-                      , Turtle.format fp path
-                      ]
-                      empty
-          let handler2 :: SomeException -> IO ()
-              handler2 e = do
-                  let pathText      = Turtle.format fp path
-                  let exceptionText = Data.Text.pack (show e)
-                  let msg           = [NeatInterpolation.text|
+          if new == old
+              then do
+                  let same = Turtle.format ("[+] Unchanged: "%fp) path
+                  mapM_ Turtle.err (Turtle.Line.textToLines same)
+              else do
+                  -- NB: path shouldn't is a FilePath and won't have any
+                  -- newlines, so this should be okay
+                  Turtle.err (Turtle.unsafeTextToLine $ Turtle.format ("[+] Installing: "%fp) path)
+
+                  warnSudo
+
+                  let install =
+                          Turtle.procs "sudo"
+                              [ "mv"
+                              , Turtle.format fp localPath
+                              , Turtle.format fp path
+                              ]
+                              empty
+                  let handler2 :: SomeException -> IO ()
+                      handler2 e = do
+                          let pathText      = Turtle.format fp path
+                          let exceptionText = Data.Text.pack (show e)
+                          let msg           = [NeatInterpolation.text|
 [x] Could not install: $pathText
 
     Debugging tips:
@@ -290,9 +302,9 @@ exchangeKeys key host = do
 
     Original error: $exceptionText
 |]
-                  Turtle.die msg
+                          Turtle.die msg
 
-          liftIO (Control.Exception.handle handler2 install)
+                  liftIO (Control.Exception.handle handler2 install)
 
   mirror privateKey
   mirror publicKey
