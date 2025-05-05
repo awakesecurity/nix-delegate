@@ -400,7 +400,7 @@ delegateShared OptArgs{..}  = do
 
     mAuthSock <- Turtle.need "SSH_AUTH_SOCK"
     let sshAuthSock = maybe "" (Turtle.format ("ssh-auth-sock="%s%":")) mAuthSock
-    let nixpkgpath  = Turtle.inproc "nix-build" [ "--no-out-link", "--realise", "<nixpkgs>", "--attr", "nix" ] empty
+    let nixpkgpath  = Turtle.inproc "nix-build" [ "--no-out-link", "--quiet", "<nixpkgs>", "--attr", "nix" ] empty
 
     hook <- Turtle.fold nixpkgpath Foldl.head >>= \case
       Just nixpkgpath' -> do
